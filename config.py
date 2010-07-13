@@ -9,10 +9,22 @@ service/config.py is meant as a replacement for service-config
 to create the directory structures for daemontools (http://cr.yp.to/daemontools).
 '''
 
+import errno
 import sys
 import os
 import pwd
 from optparse import OptionParser
+
+
+def _makedirs(*args, **kwargs):
+    """
+    Wrap os.makedirs to skip errno.EEXIST.
+    """
+    try:
+        os.makedirs(*args, **kwargs)
+    except OSError, exception:
+        if exception.errno != errno.EEXIST:
+            raise
 
 
 def get_ids(username):
@@ -27,7 +39,7 @@ def makelog(directory, loguser):
     uid, gid = get_ids(loguser)
     
     fname = os.path.join(directory, 'main')
-    os.makedirs(fname)
+    _makedirs(fname)
     os.chown(fname, uid, gid)
     os.chmod(fname, 02755)
     
@@ -72,7 +84,7 @@ def create(templates):
         try:
             directory = template['directory']
             for subdir in 'env', 'log':
-                os.makedirs(os.path.join(directory, subdir), 02755)
+                _makedirs(os.path.join(directory, subdir), 02755)
         
             makelog(os.path.join(directory, 'log'), template.get('loguser', template.get('user')))
         
